@@ -1,0 +1,10 @@
+{
+  "name": "deepseek-pow-proxy",
+  "version": "1.0.0",
+  "description": "本地 POW 求解代理，转发到 Cloudflare Worker",
+  "main": "proxy.js",
+  "scripts": {
+    "start": "node proxy.js"
+  },
+  "dependencies": {}
+}
