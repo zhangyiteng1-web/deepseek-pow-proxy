@@ -90,7 +90,7 @@ function solvePow(ch) {
 }
 
 // ====== 代理核心 ======
-const UPSTREAM = process.env.DEEPSEEK_BASE_URL || 'https://deepseek-cf-worker.pages.dev';
+const UPSTREAM = (process.env.DEEPSEEK_BASE_URL || 'https://deepseek-cf-worker.pages.dev').trim().replace(/\/+$/, '');
 const PORT = parseInt(process.env.PORT || '8899', 10);
 
 // POW 答案缓存（5 分钟内有效）
