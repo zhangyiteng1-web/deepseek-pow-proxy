@@ -93,8 +93,8 @@ function solvePow(ch) {
 const UPSTREAM = (process.env.DEEPSEEK_BASE_URL || 'https://deepseek-cf-worker.pages.dev').trim().replace(/\/+$/, '');
 const PORT = parseInt(process.env.PORT || '8899', 10);
 
-// POW 答案缓存（5 分钟内有效）
-const powCache = new Map();
+// POW 不缓存 — 每次请求新鲜计算，避免 session 冲突导致的空响应
+let powStats = { total: 0, totalTime: 0 };
 
 async function fetchWithRetry(url, options, retries = 2) {
   for (let i = 0; i <= retries; i++) {
@@ -108,14 +108,7 @@ async function fetchWithRetry(url, options, retries = 2) {
 }
 
 async function getPowHeader() {
-  // Try cached first
-  const now = Date.now();
-  for (const [key, val] of powCache) {
-    if (val.expireAt > now) return val.header;
-    powCache.delete(key);
-  }
-
-  // Get challenge
+  // Get fresh challenge each time (no caching)
   const resp = await fetchWithRetry(UPSTREAM + '/v1/pow-challenge');
   if (!resp.ok) throw new Error('Failed to get POW challenge: ' + resp.status);
   const ch = await resp.json();
@@ -124,7 +117,10 @@ async function getPowHeader() {
   const start = Date.now();
   const answer = solvePow(ch);
   const elapsed = Date.now() - start;
-  console.log(`[POW] Solved in ${elapsed}ms, nonce=${answer}`);
+  powStats.total++;
+  powStats.totalTime += elapsed;
+  const avg = Math.round(powStats.totalTime / powStats.total);
+  console.log(`[POW] nonce=${answer} ${elapsed}ms (avg ${avg}ms, #${powStats.total})`);
 
   if (answer < 0) throw new Error('POW solver failed');
 
@@ -137,9 +133,6 @@ async function getPowHeader() {
     target_path: '/api/v0/chat/completion'
   };
   const powB64 = Buffer.from(JSON.stringify(powAnswer)).toString('base64');
-
-  // Cache for 4 minutes
-  powCache.set(powB64, { header: powB64, expireAt: now + 240000 });
 
   return powB64;
 }
